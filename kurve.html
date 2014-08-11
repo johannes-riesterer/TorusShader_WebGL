@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Toruskurve</title>
+		<meta charset="utf-8">
+         <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+            <style>
+               body {
+                  background-color: #ffffff;
+                  margin: 0px;
+                  overflow: hidden;
+               }
+            
+            a {
+               color:#0078ff;
+            }
+            </style>
+            </head>
+     <div id="canvas"> </div>
+	<body>
+      
+      
+      <script src="three.min.js"></script>
+      
+      
+      <script type="x-shader/x-vertex" id="vertexshader">
+			attribute float time;
+         attribute float b;
+         attribute float c;
+         uniform float size;
+         varying float color;
+			void main() {
+            color = c;
+            vec3 mvPosition;
+            mvPosition.x = (size*9.3 + 7.0* cos(b*time))* cos(3.1415926535*time);
+            mvPosition.y = (size*9.3 + 7.0* cos(b*time))* sin(3.1415926535*time);
+            mvPosition.z = 7.0*sin(b*time);
+            gl_PointSize =c * 7.1;
+            vec4 newPosition = modelViewMatrix * vec4( mvPosition, 1.0 );
+            
+            gl_Position = projectionMatrix * newPosition;
+         }
+      </script>
+      
+      
+		<script type="x-shader/x-fragment" id="fragmentshader">
+         varying float color;
+         uniform sampler2D tPsycho;
+         
+			void main() {
+            vec2 tPos = vec2( 0, color  );
+            vec4 aColor = texture2D( tPsycho, tPos );
+            gl_FragColor = vec4( aColor.rgb, 1.0 );
+            
+			}
+      </script>
+      
+      
+      
+		<script>
+         var count = 1.0;
+         var color = 0.0;
+         var particles = 60000;
+			var container, stats;
+         var t=1.0;
+         var bv = 4.0;
+			var camera, scene, renderer;
+         var positions;
+			var attributes;
+         var uniforms;
+         var geometry;
+         var up = true;
+			init();
+			animate();
+         var particleSystem;
+			
+         function init() {
+            container = document.getElementById( 'canvas' );
+            
+            camera = new THREE.PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 5, 3500 );
+            camera.position.z = 95;
+            
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog( 0xffffff, 2000, 3500 );
+            
+            geometry = new  THREE.Geometry();
+            
+            for (var i = 0; i< particles; i++) {
+               geometry.vertices.push(new THREE.Vertex(new THREE.Vector3(0,0,0)));
+            }
+            
+            attributes = {
+               time: {	type: 'f', value: [] },
+               b:    {	type: 'f', value: [] },
+               c:    {	type: 'f', value: [] }
+            };
+            
+            uniforms = {
+               size: {	type: 'f', value: 1.0 },
+               tPsycho: { // texture in slot 0, loaded with ImageUtils
+                  type: "t",
+                  value: THREE.ImageUtils.loadTexture( 'psycho.png' )
+               }
+            };
+            
+            
+            var shaderMaterial = new THREE.ShaderMaterial( {
+                                                          uniforms:       uniforms,
+                                                          attributes:     attributes,
+                                                          vertexShader:   document.getElementById( 'vertexshader' ).textContent,
+                                                          fragmentShader: document.getElementById( 'fragmentshader' ).textContent
+                                                          });
+                                                          
+                                                          
+                                                          particleSystem = new THREE.ParticleSystem( geometry, shaderMaterial );
+                                                          
+                                                          var vertices = particleSystem.geometry.vertices;
+                                                          var values_time = attributes.time.value;
+                                                          var values_b = attributes.b.value;
+                                                          
+                                                          for( var v = 0; v < vertices.length; v++ ) {
+                                                             values_time[v] = t;
+                                                             values_b[v] = bv;
+                                                             t+= 0.001;
+                                                          }
+                                                          
+                                                          scene.add( particleSystem );
+                                                          
+                                                          renderer = new THREE.WebGLRenderer( { antialias: true, alpha: false } );
+                                                          renderer.setClearColor( scene.fog.color, 1 );
+                                                          renderer.setSize( 1024, 720);
+                                                          
+                                                          container.appendChild( renderer.domElement );
+                                                          
+                                                             //        window.addEventListener( 'resize', onWindowResize, false );
+                                                             
+         }
+      
+      function onWindowResize() {
+         
+         windowHalfX = window.innerWidth / 2;
+         windowHalfY = window.innerHeight / 2;
+         
+         camera.aspect = window.innerWidth / window.innerHeight;
+         camera.updateProjectionMatrix();
+         
+         renderer.setSize( window.innerWidth/2, window.innerHeight/2 );
+         
+      }
+      
+      
+      function animate() {
+         requestAnimationFrame( animate );
+         var vertices = particleSystem.geometry.vertices;
+         var values_time = attributes.time.value;
+         var values_b = attributes.b.value;
+         
+         for( var v = 0; v < vertices.length; v++ ) {
+            attributes.c.value[v] = color;
+            
+            values_b[v] = bv;
+            count += 0.00000001;
+            
+            uniforms.size.value = 1.5*Math.abs(Math.sin(count));
+            uniforms.size.needsUpdate = true;
+            attributes.c.needsUpdate = true;
+            
+            if(color >1) {
+               up = false;
+            }
+            
+            if(color <0) {
+               up = true;
+            }
+            
+            if(up ==true) {
+               color += 0.0001;
+               
+            }
+            else {
+               color -= 0.0001;
+               
+            }
+            
+         }
+         
+         bv+=0.0001;
+         
+         
+         attributes.b.needsUpdate = true;
+         
+         particleSystem.rotation.x += 0.004;
+         renderer.render( scene, camera );
+      }
+      
+         </script>
+      
+      
+      
+</body>
+</html>
